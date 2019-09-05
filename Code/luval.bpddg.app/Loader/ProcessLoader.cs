@@ -61,16 +61,16 @@ namespace luval.bpddg.app.Loader
                     var resourceId = ResourceResolver.Instance.Get("BPRUNTIME.EAST01.{0}".Fi(Simulator.Id.ToString().PadLeft(5, '0'))).ResourceId;
                     var session = new Session()
                     {
-                        SessionNumber = GetNextSessionNumber(),
                         StartDateTime = startDate,
                         ProcessId = Main.ProcessId,
                         LastUpdated = DateTime.Now,
                         RunningResourceId = resourceId,
-                        StartResourceId = resourceId,
+                        StarterResourceId = resourceId,
                         QueueId = Main.Queue.Ident,
                         EndDateTime = startDate,
                     };
                     _sessionAdapter.Insert(session);
+                    session = _sessionAdapter.Read<Session>(session); //get updated identity value
                     for (int i = 0; i < tranCount; i++)
                     {
                         var probability = new Random().NextDouble();
@@ -125,13 +125,6 @@ namespace luval.bpddg.app.Loader
         private long GetNextQueueItemIdent()
         {
             var res = _db.ExecuteScalar("SELECT MAX(ident) FROM BPAWorkQueueItem");
-            if (res.IsNullOrDbNull()) return 1;
-            return Convert.ToInt32(res) + 1;
-        }
-
-        private int GetNextSessionNumber()
-        {
-            var res = _db.ExecuteScalar("SELECT MAX(sessionnumber) FROM BPASession");
             if (res.IsNullOrDbNull()) return 1;
             return Convert.ToInt32(res) + 1;
         }

@@ -19,7 +19,7 @@ namespace luval.bpddg.app.Entities
         }
         [PrimaryKey]
         public string Id { get; set; }
-        public string QueueId { get; set; }
+        public string QueueId { get; set; } 
         public string KeyValue { get; set; }
         public string Status { get; set; }
         public int Attempt { get; set; }

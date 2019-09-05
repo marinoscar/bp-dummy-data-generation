@@ -22,9 +22,7 @@ namespace luval.bpddg.app.Generator
 
         private TagEntity Create(string name)
         {
-            var o = this.Adapter.Database.ExecuteScalar("SELECT MAX(id) FROM BPATag");
-            if (o.IsNullOrDbNull()) o = 0;
-            return Create(new TagEntity() { Id = Convert.ToInt32(o)+1, Tag = name});
+            return Create(new TagEntity() { Tag = name});
         }
     }
 }
