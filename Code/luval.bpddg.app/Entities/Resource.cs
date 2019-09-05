@@ -19,7 +19,7 @@ namespace luval.bpddg.app.Entities
         public string ResourceId { get; set; }
         [PrimaryKey]
         public string Name { get; set; }
-        public int ProcessRunning { get; set; }
+        public int ProcessesRunning { get; set; }
         public int ActionsRunning { get; set; }
         public int UnitsAllocated { get; set; }
         public int Diagnostics { get; set; }

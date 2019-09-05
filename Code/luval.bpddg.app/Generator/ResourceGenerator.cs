@@ -8,15 +8,8 @@ using System.Threading.Tasks;
 
 namespace luval.bpddg.app.Generator
 {
-    public class ResourceGenerator
+    public class ResourceGenerator : GeneratorBase<Resource>
     {
-        private Database _db;
-        private EntityAdapter _resourceAdapter;
-        public ResourceGenerator()
-        {
-            _db = DbHelper.CreateDb();
-            _resourceAdapter = DbHelper.CreateAdapter<Resource>();
-        }
 
         public Resource GetOrCreate(string name)
         {
@@ -25,14 +18,12 @@ namespace luval.bpddg.app.Generator
 
         private Resource Get(string name)
         {
-            return _resourceAdapter.Read<Resource>(new Resource() { Name = name });
+            return Get(new Resource() { Name = name });
         }
 
         private Resource Create(string name)
         {
-            var res = new Resource() { Name = name };
-            _resourceAdapter.Insert(res);
-            return res;
+            return Create(new Resource() { Name = name });
         }
     }
 }

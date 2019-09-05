@@ -2,6 +2,7 @@
 using luval.bpddg.app.Generator;
 using luval.bpddg.app.Resolvers;
 using Luval.Data;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,93 +14,133 @@ namespace luval.bpddg.app.Loader
     public class ProcessLoader
     {
         private Database _db;
-        private EntityAdapter _processAdapter;
-        private UserResolver _userResolver;
-        private EntityAdapter _queueAdapter;
+        private EntityAdapter _sessionAdapter;
+        private EntityAdapter _wqiAdapter;
 
         public ProcessLoader(ProcessSim sim)
         {
             Simulator = sim;
             _db = DbHelper.CreateDb();
-            _processAdapter = DbHelper.CreateAdapter(typeof(Process));
-            _queueAdapter = DbHelper.CreateAdapter(typeof(WorkQueue));
+            _sessionAdapter = DbHelper.CreateAdapter<Session>();
+            _wqiAdapter = DbHelper.CreateAdapter<WorkQueueItem>();
         }
 
         public ProcessSim Simulator { get; private set; }
         public Process Load { get; set; }
         public Process Main { get; set; }
         public Process Execute { get; set; }
-        protected UserResolver UserResolver
-        {
-            get
-            {
-                if (_userResolver == null) _userResolver = new UserResolver();
-                return _userResolver;
-            }
-        }
 
         public void LoadOrCreateProcessRoles()
         {
-            Load = GetOrCreate(Simulator.GetProcessName("Load"));
-            Main = GetOrCreate(Simulator.GetProcessName("Main"));
-            Execute = GetOrCreate(Simulator.GetProcessName("Execute"));
-            Main.Queue = GetOrCreateQueue();
+            var processGen = new ProcessGenerator();
+            var groupGen = new GroupGenerator();
+            var queueGen = new WorkQueueGenerator();
+            Load = processGen.GetOrCreate(Simulator.GetProcessName("Load"));
+            Main = processGen.GetOrCreate(Simulator.GetProcessName("Main"));
+            Execute = processGen.GetOrCreate(Simulator.GetProcessName("Execute"));
+            Load.Groups = groupGen.GetOrCreate(Load, Simulator.Region, Simulator.ServiceLine, Simulator.BusinessUnit, Simulator.GetProcessGroup());
+            Main.Groups = groupGen.GetOrCreate(Main, Simulator.Region, Simulator.ServiceLine, Simulator.BusinessUnit, Simulator.GetProcessGroup());
+            Execute.Groups = groupGen.GetOrCreate(Execute, Simulator.Region, Simulator.ServiceLine, Simulator.BusinessUnit, Simulator.GetProcessGroup());
+            Main.Queue = queueGen.GetOrCreate(Simulator.GetProcessName("WQ"));
         }
 
-        private WorkQueue GetOrCreateQueue()
+        public void GenerateSessions()
         {
-            var name = Simulator.GetProcessName("WQ");
-            return GetQueue(name) ?? CreateQueue(name);
-        }
-
-        private WorkQueue CreateQueue(string name)
-        {
-            var ident = Convert.ToInt32(_db.ExecuteScalar("SELECT MAX(ident) FROM BPAWorkQueue")) + 1;
-            var queue = new WorkQueue() { Ident = ident, Name = name };
-            _queueAdapter.Insert(DictionaryDataRecord.FromEntity(queue));
-            return queue;
-            
-        }
-
-        private WorkQueue GetQueue(string name)
-        {
-            return _db.ExecuteToEntityList<WorkQueue>("select * from BPAWorkQueue where name = {0}".FormatSql(name))
-                .FirstOrDefault();
-        }
-
-        private Process GetOrCreate(string name)
-        {
-            var process = GetProcess(name);
-            if (process == null) return CreateProcess(name);
-            return process;
-        }
-
-        private Process CreateProcess(string name)
-        {
-            var user = UserResolver.Get("admin");
-            var process = new Process()
+            var startDate = GetLastDateForProcess();
+            var endDate = DateTime.Today.AddDays(1);
+            var currentDate = startDate;
+            while (currentDate < endDate)
             {
-                Name = name,
-                CreatedBy = user.UserId,
-                AttributeID = name.Contains("Main") ? 2 : 0,
-                RunMode = 1,
-                LastModifiedBy = user.UserId
-            };
-            process.UpdateXml();
-            var record = DictionaryDataRecord.FromEntity(process);
-            _processAdapter.Insert(record);
-            return GetProcess(name);
+                var startTime = currentDate.AddMinutes(Simulator.StartMinDate);
+                var endTime = currentDate.AddMinutes(Simulator.EndMinDate);
+                while (startTime < endTime)
+                {
+                    var tranCount = (new Random()).Next(Simulator.MinTransaction, Simulator.MaxTransaction);
+                    var maxDuration = Convert.ToDouble(Math.Ceiling((double)(Simulator.Interval / tranCount)));
+                    var minDuration = Convert.ToDouble(Math.Floor(maxDuration * 0.85));
+                    var resourceId = ResourceResolver.Instance.Get("BPRUNTIME.EAST01.{0}".Fi(Simulator.Id.ToString().PadLeft(5, '0'))).ResourceId;
+                    var session = new Session()
+                    {
+                        SessionNumber = GetNextSessionNumber(),
+                        StartDateTime = startDate,
+                        ProcessId = Main.ProcessId,
+                        LastUpdated = DateTime.Now,
+                        RunningResourceId = resourceId,
+                        StartResourceId = resourceId,
+                        QueueId = Main.Queue.Ident,
+                        EndDateTime = startDate,
+                    };
+                    _sessionAdapter.Insert(session);
+                    for (int i = 0; i < tranCount; i++)
+                    {
+                        var probability = new Random().NextDouble();
+                        var completed = startTime.AddMinutes(GetRandomNumber(minDuration, maxDuration));
+                        var tag = default(string);
+                        var wq = new WorkQueueItem()
+                        {
+                            Ident = GetNextQueueItemIdent(),
+                            QueueIdent = Main.Queue.Ident,
+                            QueueId = Main.Queue.Id,
+                            Loaded = startTime
+                        };
+                        if (probability <= Simulator.FPY)
+                        {
+                            wq.Completed = completed;
+                        }
+                        else if (probability <= (Simulator.FPY + Simulator.BusinessException))
+                        {
+                            tag = "Business Exception";
+                            wq.Exception = completed;
+                            wq.ExceptionReason = "Bussiness Exception: Failed to complete transaction";
+                        }
+                        else
+                        {
+                            tag = "System Exception";
+                            wq.Exception = completed;
+                            wq.ExceptionReason = "System Exception: Failed to complete transaction";
+                        }
+                        _wqiAdapter.Insert(wq);
+                        MarryTag(wq, tag);
+                        startTime = completed.AddSeconds(1);
+                        System.Threading.Thread.Sleep(20);//Force next random value
+                    }
+                }
+                currentDate = currentDate.Date.AddDays(1);//move to the next day
+            }
         }
 
-        private Process GetProcess(string name)
+        private void MarryTag(WorkQueueItem wqi, string tag)
         {
-            var record = DictionaryDataRecord.FromEntity(new Process() { Name = name });
-            var process = _processAdapter.Read<Process>(record);
-            if (process == null) return null;
-            var groupGenerator = new GroupGenerator();
-            process.Groups = groupGenerator.GetOrCreate(process, Simulator.Region, Simulator.ServiceLine, Simulator.BusinessUnit, Simulator.GetProcessGroup());
-            return process;
+            if (string.IsNullOrWhiteSpace(tag)) return;
+            var tagItem = TagResolver.Instance.Get(tag);
+            _db.ExecuteNonQuery("INSERT INTO BPAWorkQueueItemTag VALUES ({0} {1})".FormatSql(wqi.Ident, tagItem.Id));
         }
 
+        public double GetRandomNumber(double minimum, double maximum)
+        {
+            Random random = new Random();
+            return random.NextDouble() * (maximum - minimum) + minimum;
+        }
+
+        private long GetNextQueueItemIdent()
+        {
+            var res = _db.ExecuteScalar("SELECT MAX(ident) FROM BPAWorkQueueItem");
+            if (res.IsNullOrDbNull()) return 1;
+            return Convert.ToInt32(res) + 1;
+        }
+
+        private int GetNextSessionNumber()
+        {
+            var res = _db.ExecuteScalar("SELECT MAX(sessionnumber) FROM BPASession");
+            if (res.IsNullOrDbNull()) return 1;
+            return Convert.ToInt32(res) + 1;
+        }
+
+        private DateTime GetLastDateForProcess()
+        {
+            var res = _db.ExecuteScalar("SELECT MAX(startdatetime) FROM BPASession WHERE processid = {0}".FormatSql(Main.ProcessId));
+            if (res.IsNullOrDbNull()) return Simulator.StartDate;
+            return Convert.ToDateTime(res).Date.AddDays(1);
+        }
     }
 }

@@ -17,17 +17,11 @@ namespace luval.bpddg.app
         static void Main(string[] args)
         {
             var processMaster = new ProcessMaster();
-            processMaster.GetSims(@".\Resources\GenerationTemplate.xlsx");
-            var processSim = new ProcessSim()
-            {
-                Region = "North America",
-                ServiceLine = "Customer Service",
-                BusinessUnit = "Order To Cash",
-                Name = "Order Entry",
-                Id = 1
-            };
-            var loader = new ProcessLoader(processSim);
+            var sims = processMaster.GetSims(@".\Resources\GenerationTemplate.xlsx");
+            
+            var loader = new ProcessLoader(sims.First());
             loader.LoadOrCreateProcessRoles();
+            loader.GenerateSessions();
         }
     }
 }

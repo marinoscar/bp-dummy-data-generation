@@ -59,18 +59,27 @@
     <Compile Include="Entities\Process.cs" />
     <Compile Include="Entities\ProcessSim.cs" />
     <Compile Include="Entities\Resource.cs" />
+    <Compile Include="Entities\Session.cs" />
+    <Compile Include="Entities\Tag.cs" />
     <Compile Include="Entities\User.cs" />
     <Compile Include="Entities\WorkQueue.cs" />
+    <Compile Include="Entities\WorkQueueItem.cs" />
+    <Compile Include="Generator\GeneratorBase.cs" />
     <Compile Include="Generator\GroupGenerator.cs" />
+    <Compile Include="Generator\ProcessGenerator.cs" />
     <Compile Include="Generator\ResourceGenerator.cs" />
+    <Compile Include="Generator\TagGenerator.cs" />
+    <Compile Include="Generator\WorkQueueGenerator.cs" />
     <Compile Include="Loader\ProcessLoader.cs" />
     <Compile Include="Loader\ProcessMaster.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resolvers\ProcessResolver.cs" />
+    <Compile Include="Resolvers\QueueResolver.cs" />
     <Compile Include="Resolvers\Resolver.cs" />
     <Compile Include="Resolvers\ResourceResolver.cs" />
     <Compile Include="Resolvers\SingletonResolver.cs" />
+    <Compile Include="Resolvers\TagResolver.cs" />
     <Compile Include="Resolvers\UserResolver.cs" />
   </ItemGroup>
   <ItemGroup>
