@@ -113,7 +113,7 @@ namespace luval.bpddg.app.Loader
         {
             if (string.IsNullOrWhiteSpace(tag)) return;
             var tagItem = TagResolver.Instance.Get(tag);
-            _db.ExecuteNonQuery("INSERT INTO BPAWorkQueueItemTag VALUES ({0} {1})".FormatSql(wqi.Ident, tagItem.Id));
+            _db.ExecuteNonQuery("INSERT INTO BPAWorkQueueItemTag VALUES ({0}, {1})".FormatSql(wqi.Ident, tagItem.Id));
         }
 
         public double GetRandomNumber(double minimum, double maximum)

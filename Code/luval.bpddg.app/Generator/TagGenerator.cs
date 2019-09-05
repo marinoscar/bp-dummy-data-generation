@@ -22,7 +22,8 @@ namespace luval.bpddg.app.Generator
 
         private TagEntity Create(string name)
         {
-            return Create(new TagEntity() { Tag = name});
+            Create(new TagEntity() { Tag = name });
+            return Get(new TagEntity() { Tag = name});
         }
     }
 }

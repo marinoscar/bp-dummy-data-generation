@@ -10,8 +10,9 @@ namespace luval.bpddg.app.Entities
     [TableName("BPATag")]
     public class TagEntity
     {
-        [PrimaryKey, IdentityColumn]
+        [IdentityColumn]
         public int Id { get; set; }
+        [PrimaryKey]
         public string Tag { get; set; }
     }
 }
