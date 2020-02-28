@@ -34,7 +34,8 @@ namespace luval.bpddg.app.Entities
         public long Ident { get; set; }
         public string SessionId { get; set; }
         public int PrevWorkTime { get; set; }
-
+        [NotMapped]
+        public DateTime SimCompleted { get; set; }
     }
 
     [TableName("BPAWorkQueueItemTag")]

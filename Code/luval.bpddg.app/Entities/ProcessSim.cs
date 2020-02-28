@@ -28,7 +28,8 @@ namespace luval.bpddg.app.Entities
         public string GetCodeFromWord(string name)
         {
             var words = name.Split(" ".ToCharArray()).Take(3);
-            return words.Count() > 1 ? string.Join("", words.Select(i => i.ToUpperInvariant())) : words.First().Substring(0,2).ToUpperInvariant();
+            return words.Count() > 1 ? string.Join("", words.Select(i => i.ToUpperInvariant().First().ToString())) : 
+                words.First().Substring(0,2).ToUpperInvariant();
         }
 
 
